@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trackside Hokejová liga o Cejl</title>
+  <style>
+    :root{
+      --bg:#0b1020; --card:#121a33; --ink:#e9eefc; --muted:#b7c2e6; --accent:#4ea1ff; --accent-2:#21d4b3; --danger:#ff5468; --ok:#66e08a; --warn:#ffd166;
+      --shadow:0 6px 22px rgba(0,0,0,.35);
+    }
+    html,body{margin:0; font-family:system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", sans-serif; background:var(--bg); color:var(--ink);} 
+    .wrap{max-width:1100px; margin:0 auto; padding:24px;}
+    header{display:flex; gap:14px; flex-wrap:wrap; align-items:center; justify-content:space-between;}
+    h1{font-size:clamp(22px,2.8vw,32px); margin:0; letter-spacing:.3px}
+    .tabs{display:flex; gap:8px; flex-wrap:wrap}
+    .tab{border:1px solid rgba(255,255,255,.12); color:var(--ink); background:#0e1530; padding:10px 14px; border-radius:12px; cursor:pointer; user-select:none}
+    .tab.active{background:linear-gradient(110deg,var(--accent),var(--accent-2)); color:#041023; font-weight:700}
+    .card{background:var(--card); border:1px solid rgba(255,255,255,.08); border-radius:16px; box-shadow:var(--shadow);}
+    .card h2{margin:0 0 10px 0; font-size:18px}
+    .pad{padding:18px}
+
+    /* Table */
+    table{width:100%; border-collapse:collapse;}
+    th,td{padding:10px 12px; text-align:left; border-bottom:1px solid rgba(255,255,255,.08)}
+    th{color:var(--muted); font-weight:600; font-size:13px; letter-spacing:.2px}
+    td{font-size:14px}
+    tr.leader{background:linear-gradient(90deg, rgba(78,161,255,.14), rgba(33,212,179,.12));}
+    .t-badge{display:inline-flex; align-items:center; gap:8px}
+    .badge{display:inline-block; width:10px; height:10px; border-radius:50%; box-shadow:0 0 0 2px rgba(0,0,0,.25) inset}
+    .troph{margin-left:6px}
+
+    /* Rounds */
+    .accordion{border-top:1px solid rgba(255,255,255,.08)}
+    .acc-head{display:flex; justify-content:space-between; align-items:center; padding:14px 18px; cursor:pointer;}
+    .acc-title{font-weight:700}
+    .acc-body{display:none; border-top:1px dashed rgba(255,255,255,.12)}
+    .acc.open .acc-body{display:block}
+
+    /* Matches */
+    .match{display:grid; grid-template-columns: 1.2fr .4fr 1.2fr auto; gap:10px; align-items:center; padding:12px 16px;}
+    .match + .match{border-top:1px solid rgba(255,255,255,.08)}
+    .team{display:flex; align-items:center; gap:10px}
+    .team .name{font-weight:600}
+    .vs{opacity:.7; text-align:center}
+    .btn{background:#0f1833; border:1px solid rgba(255,255,255,.12); color:var(--ink); padding:8px 12px; border-radius:10px; cursor:pointer}
+    .btn.primary{background:linear-gradient(110deg,var(--accent),var(--accent-2)); color:#071122; font-weight:700}
+    .btn.ghost{background:transparent}
+
+    .stats{padding:14px 16px; background:#0e1530; border-top:1px solid rgba(255,255,255,.08)}
+    .stats form{display:grid; grid-template-columns:repeat(4, minmax(140px, 1fr)); gap:12px}
+    .field{display:flex; flex-direction:column; gap:6px}
+    .field label{font-size:12px; color:var(--muted)}
+    .field input, .field select, .field textarea{background:#09102a; color:var(--ink); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:8px 10px;}
+    .field input[type="number"]{appearance:textfield}
+    .field input::placeholder{color:#7f8bb3}
+
+    .muted{color:var(--muted)}
+    .grid{display:grid; gap:14px}
+
+    /* Team pages */
+    .team-grid{display:grid; grid-template-columns:repeat(3, minmax(220px,1fr)); gap:14px}
+    .key{color:var(--muted); font-size:12px}
+    .val{font-weight:700; font-size:18px}
+
+    /* Responsive */
+    @media (max-width:900px){
+      .stats form{grid-template-columns:repeat(2, minmax(140px,1fr));}
+      .match{grid-template-columns:1fr auto 1fr; grid-auto-rows:auto}
+      .match .vs{display:none}
+    }
+    @media (max-width:620px){
+      .team-grid{grid-template-columns:1fr}
+      header{gap:8px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>🏒 Trackside Hokejová liga o Cejl</h1>
+      <nav class="tabs">
+        <button class="tab active" data-tab="standings">Tabulka</button>
+        <button class="tab" data-tab="rounds">Kola</button>
+        <button class="tab" data-tab="teams">Týmy</button>
+        <button class="tab" data-tab="data">Data</button>
+      </nav>
+    </header>
+
+    <section id="standings" class="card pad">
+      <h2>Ligová tabulka</h2>
+      <p class="muted" id="roundNote"></p>
+      <div style="overflow:auto">
+        <table id="table-standings">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Tým</th>
+              <th>Z</th>
+              <th>V</th>
+              <th>Vpo</th>
+              <th>Ppo</th>
+              <th>P</th>
+              <th>Body</th>
+              <th>Góly</th>
+              <th>Obdržené</th>
+              <th>Rozdíl</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="rounds" class="card pad" style="margin-top:14px; display:none">
+      <h2>Rozpis kol</h2>
+      <div id="acc-rounds" class="accordion"></div>
+    </section>
+
+    <section id="teams" class="card pad" style="margin-top:14px; display:none">
+      <h2>Stránky týmů</h2>
+      <div id="teamPages" class="grid"></div>
+    </section>
+
+    <section id="data" class="card pad" style="margin-top:14px; display:none">
+      <h2>Data ligy</h2>
+      <div class="grid">
+        <div class="muted">Vše se průběžně ukládá do vašeho prohlížeče (localStorage). Pro přenos mezi zařízeními použijte export/import JSON.</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <button class="btn" id="btn-export">Export JSON</button>
+          <button class="btn" id="btn-import">Import JSON</button>
+          <button class="btn ghost" id="btn-reset">Vymazat všechna data</button>
+        </div>
+        <textarea id="io" rows="10" placeholder="Sem vložte nebo odsud zkopírujte JSON..." style="width:100%"></textarea>
+      </div>
+    </section>
+  </div>
+
+  <script>
+  // ====== Model ======
+  const TEAMS = [
+    { id:0, player:"Adam", code:"VGK", name:"Vegas Golden Knights", color:"#b3a369" },
+    { id:1, player:"Filip", code:"NSH", name:"Nashville Predators", color:"#ffb81c" },
+    { id:2, player:"Martin", code:"WSH", name:"Washington Capitals", color:"#c8102e" },
+    { id:3, player:"ShyRaptor", code:"DAL", name:"Dallas Stars", color:"#006847" },
+    { id:4, player:"Ihaz", code:"BOS", name:"Boston Bruins", color:"#ffb81c" },
+    { id:5, player:"Kráťa", code:"TOR", name:"Toronto Maple Leafs", color:"#003e7e" },
+  ];
+
+  const STORAGE_KEY = 'nhl-friends-league-v1';
+
+  // Match object shape
+  // { id, round, homeId, awayId, detail: { homeGoals, awayGoals, ot, stats:{...} } }
+
+  function saveState(){
+    const payload = { matches, version:1 };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  }
+  function loadState(){
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return null;
+    try{ return JSON.parse(raw); }catch(e){ return null }
+  }
+
+  // ====== Schedule generation (double round-robin, circle method) ======
+  function generateSchedule(teams){
+    const ids = teams.map(t=>t.id);
+    const n = ids.length; // 6
+    if(n % 2 !== 0) ids.push(null); // bye protection
+    const half = n - 1; // 5 rounds per single RR (for 6 teams)
+
+    // Create working array excluding fixed element
+    const arr = ids.slice();
+    const fixed = arr.shift(); // anchor
+
+    const single = [];
+    for(let r=0;r<half;r++){
+      const pairings = [];
+      const roundTeams = [fixed, ...arr];
+      const len = roundTeams.length;
+      for(let i=0;i<len/2;i++){
+        const t1 = roundTeams[i];
+        const t2 = roundTeams[len-1-i];
+        if(t1==null || t2==null) continue;
+        // Alternate home/away each round for balance
+        if(r % 2 === 0){ pairings.push([t1,t2]); } else { pairings.push([t2,t1]); }
+      }
+      single.push(pairings);
+      // rotate arr clockwise
+      arr.unshift(arr.pop());
+    }
+
+    // Mirror for double round robin with swapped venues
+    const second = single.map(round => round.map(([h,a]) => [a,h]));
+
+    // To avoid immediate rematches, interleave rounds: 1,6,2,7,3,8,4,9,5,10
+    const combined = [];
+    for(let i=0;i<single.length;i++){
+      combined.push(single[i]);
+      combined.push(second[i]);
+    }
+
+    // Build matches list with round numbers starting at 1
+    let id = 1; const matches = [];
+    combined.forEach((round, idx)=>{
+      round.forEach(([home,away])=>{
+        matches.push({ id:id++, round: idx+1, homeId:home, awayId:away, detail:null });
+      })
+    });
+
+    return matches;
+  }
+
+  // ====== Points & standings ======
+  function evaluateMatch(m){
+    if(!m.detail) return null;
+    const { homeGoals, awayGoals, ot } = m.detail;
+    if(homeGoals==='' || awayGoals==='') return null;
+    const hg = Number(homeGoals), ag = Number(awayGoals);
+    if(Number.isNaN(hg) || Number.isNaN(ag)) return null;
+    if(hg===ag && !ot) return null; // tie only allowed with OT flag
+
+    const res = { home:{ gp:1, w:0, wot:0, lot:0, l:0, gf:hg, ga:ag, pts:0 }, away:{ gp:1, w:0, wot:0, lot:0, l:0, gf:ag, ga:hg, pts:0 } };
+
+    if(hg>ag){
+      if(ot){ res.home.wot=1; res.home.pts=2; res.away.lot=1; res.away.pts=1; }
+      else { res.home.w=1; res.home.pts=3; res.away.l=1; }
+    } else if(ag>hg){
+      if(ot){ res.away.wot=1; res.away.pts=2; res.home.lot=1; res.home.pts=1; }
+      else { res.away.w=1; res.away.pts=3; res.home.l=1; }
+    }
+    return res;
+  }
+
+  function computeStandings(matches){
+    const init = TEAMS.map(t=>({
+      id:t.id, name:t.name, code:t.code, color:t.color,
+      gp:0, w:0, wot:0, lot:0, l:0, pts:0, gf:0, ga:0
+    }));
+    const byId = Object.fromEntries(init.map(t=>[t.id,t]));
+
+    matches.forEach(m=>{
+      const ev = evaluateMatch(m);
+      if(!ev) return;
+      const H = byId[m.homeId], A = byId[m.awayId];
+      const h = ev.home, a = ev.away;
+      H.gp+=h.gp; H.w+=h.w; H.wot+=h.wot; H.lot+=h.lot; H.l+=h.l; H.pts+=h.pts; H.gf+=h.gf; H.ga+=h.ga;
+      A.gp+=a.gp; A.w+=a.w; A.wot+=a.wot; A.lot+=a.lot; A.l+=a.l; A.pts+=a.pts; A.gf+=a.gf; A.ga+=a.ga;
+    });
+
+    const table = Object.values(byId).map(t=>({ ...t, diff:t.gf - t.ga }));
+    table.sort((a,b)=>{
+      if(b.pts!==a.pts) return b.pts-a.pts;
+      if(b.w!==a.w) return b.w-a.w; // more regulation wins
+      if(b.diff!==a.diff) return b.diff-a.diff;
+      if(b.gf!==a.gf) return b.gf-a.gf;
+      return a.name.localeCompare(b.name);
+    });
+    return table;
+  }
+
+  // ====== Rendering ======
+  const el = sel => document.querySelector(sel);
+  const mk = (tag, cls) => { const e=document.createElement(tag); if(cls) e.className=cls; return e; }
+
+  function renderStandings(){
+    const tbody = el('#table-standings tbody');
+    tbody.innerHTML='';
+    const table = computeStandings(matches);
+    table.forEach((t,idx)=>{
+      const tr = document.createElement('tr');
+      if(idx===0) tr.classList.add('leader');
+      tr.innerHTML = `
+        <td>${idx+1}${idx===0? ' <span class="troph">🏆</span>':''}</td>
+        <td class="t-badge"><span class="badge" style=\"background:${t.color}\"></span> ${t.name}</td>
+        <td>${t.gp}</td>
+        <td>${t.w}</td>
+        <td>${t.wot}</td>
+        <td>${t.lot}</td>
+        <td>${t.l}</td>
+        <td><b>${t.pts}</b></td>
+        <td>${t.gf}</td>
+        <td>${t.ga}</td>
+        <td>${t.diff>=0? '+'+t.diff: t.diff}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // progress note
+    const played = matches.filter(m=>evaluateMatch(m)).length;
+    el('#roundNote').textContent = `Odehráno zápasů: ${played} / ${matches.length} • Kol: 10 • Zápasů v kole: 3`;
+  }
+
+  function statField(id,label,type='number',placeholder=''){
+    const wrap = mk('div','field');
+    const lab = mk('label'); lab.setAttribute('for',id); lab.textContent = label;
+    const input = document.createElement('input');
+    input.id = id; input.type = type; input.placeholder = placeholder;
+    wrap.append(lab,input); return {wrap, input};
+  }
+
+  function renderRounds(){
+    const host = el('#acc-rounds'); host.innerHTML='';
+    const grouped = groupBy(matches, m=>m.round);
+    Object.keys(grouped).forEach(r=>{
+      const acc = mk('div','acc');
+      const head = mk('div','acc-head');
+      head.innerHTML = `<div class="acc-title">${r}. kolo</div><div class="muted">${grouped[r].length} zápasy</div>`;
+      head.onclick = ()=> acc.classList.toggle('open');
+      const body = mk('div','acc-body');
+
+      grouped[r].forEach(m=> body.appendChild(renderMatchRow(m)) );
+
+      acc.append(head, body); host.appendChild(acc);
+    });
+  }
+
+  function teamBadge(t){
+    const d = mk('div','team');
+    const dot = mk('span','badge'); dot.style.background = t.color;
+    const nm = mk('span','name'); nm.textContent = t.name;
+    d.append(dot,nm); return d;
+  }
+
+  function renderMatchRow(m){
+    const row = mk('div');
+    row.className = 'match';
+
+    const home = TEAMS.find(t=>t.id===m.homeId);
+    const away = TEAMS.find(t=>t.id===m.awayId);
+
+    const a = teamBadge(home);
+    const vs = mk('div','vs'); vs.textContent = 'vs';
+    const b = teamBadge(away);
+    const btn = mk('button','btn'); btn.textContent = 'Detail';
+
+    const stats = mk('div','stats');
+    const form = mk('form');
+
+    const fHomeGoals = statField(`hg-${m.id}`,'Góly domácích');
+    const fAwayGoals = statField(`ag-${m.id}`,'Góly hostů');
+
+    const fOT = mk('div','field');
+    const labOT = mk('label'); labOT.textContent = 'Prodloužení / nájezdy';
+    const selOT = document.createElement('select'); selOT.id = `ot-${m.id}`;
+    selOT.innerHTML = '<option value="false">Ne</option><option value="true">Ano</option>';
+    fOT.append(labOT, selOT);
+
+    const statNames = [
+      ['shotsH','Střely (domácí)'], ['shotsA','Střely (hosté)'],
+      ['hitsH','Hity (domácí)'], ['hitsA','Hity (hosté)'],
+      ['toaH','Čas v útočném pásmu (domácí)'], ['toaA','Čas v útočném pásmu (hosté)'],
+      ['passH','Úspěšnost přihrávek % (domácí)'], ['passA','Úspěšnost přihrávek % (hosté)'],
+      ['foH','Vyhraná vhazování (domácí)'], ['foA','Vyhraná vhazování (hosté)'],
+      ['pimH','Trestné minuty (domácí)'], ['pimA','Trestné minuty (hosté)'],
+      ['ppH','Přesilovky (domácí)'], ['ppA','Přesilovky (hosté)'],
+      ['ppminH','Čas přesilovky (domácí)'], ['ppminA','Čas přesilovky (hosté)'],
+      ['shgH','Góly v oslabení (domácí)'], ['shgA','Góly v oslabení (hosté)']
+    ];
+
+    const statInputs = {};
+    statNames.forEach(([key,label])=>{
+      const f = statField(`${key}-${m.id}`, label, 'text');
+      statInputs[key] = f.input; form.appendChild(f.wrap);
+    });
+
+    form.prepend(fHomeGoals.wrap, fAwayGoals.wrap, fOT);
+
+    const save = mk('button','btn primary'); save.type='button'; save.textContent='Uložit zápas';
+    const reset = mk('button','btn'); reset.type='button'; reset.textContent='Vymazat hodnoty';
+    const info = mk('div','muted'); info.style.gridColumn='1/-1';
+
+    save.onclick = ()=>{
+      // Validate goals
+      const hg = fHomeGoals.input.value.trim();
+      const ag = fAwayGoals.input.value.trim();
+      const ot = selOT.value === 'true';
+      if(hg!=='' && ag!==''){
+        if(Number(hg)===Number(ag) && !ot){
+          info.textContent = 'Při remíze zapněte volbu Prodloužení/Nájezdy.';
+          return;
+        }
+      }
+      // collect stats text fields
+      const statsObj = {};
+      Object.entries(statInputs).forEach(([k,input])=> statsObj[k]=input.value.trim());
+      m.detail = { homeGoals:hg, awayGoals:ag, ot, stats:statsObj };
+      saveState();
+      renderStandings();
+      renderTeamPages();
+      info.textContent = 'Uloženo.';
+    };
+    reset.onclick = ()=>{
+      m.detail = null; saveState();
+      [...form.querySelectorAll('input')].forEach(i=> i.value='');
+      selOT.value='false';
+      renderStandings();
+      renderTeamPages();
+      info.textContent = 'Vymazáno.';
+    };
+
+    form.append(save, reset, info);
+    stats.appendChild(form);
+
+    btn.onclick = ()=> stats.parentElement.classList.toggle('open');
+
+    row.append(a, vs, b, btn);
+
+    const acc = mk('div','acc');
+    const head = mk('div','acc-head'); head.style.display='none';
+    const body = mk('div','acc-body'); body.appendChild(stats);
+    acc.append(head, body);
+
+    const wrap = mk('div');
+    wrap.append(row, acc);
+
+    // hydrate if existing
+    if(m.detail){
+      fHomeGoals.input.value = m.detail.homeGoals ?? '';
+      fAwayGoals.input.value = m.detail.awayGoals ?? '';
+      selOT.value = m.detail.ot ? 'true':'false';
+      if(m.detail.stats){
+        Object.entries(m.detail.stats).forEach(([k,v])=>{
+          if(statInputs[k]) statInputs[k].value = v;
+        });
+      }
+    }
+
+    return wrap;
+  }
+
+  function renderTeamPages(){
+    const host = el('#teamPages'); host.innerHTML='';
+    const table = computeStandings(matches);
+
+    table.forEach(t=>{
+      const card = mk('div','card pad');
+      const header = mk('div');
+      header.style.display='flex'; header.style.justifyContent='space-between'; header.style.alignItems='center';
+      const left = mk('div','t-badge');
+      const dot = mk('span','badge'); dot.style.background=t.color; left.append(dot, document.createTextNode(' '+t.name));
+      const gist = mk('div','muted'); gist.textContent = `Z:${t.gp} • Body:${t.pts} • Skóre:${t.gf}:${t.ga} (${t.diff>=0? '+'+t.diff:t.diff})`;
+      header.append(left,gist);
+
+      // Stats grid
+      const grid = mk('div','team-grid');
+      const cells = [
+        ['Výhry',''+t.w], ['Výhry po prodl.',''+t.wot], ['Prohry po prodl.',''+t.lot],
+        ['Prohry',''+t.l], ['Vstřelené góly',''+t.gf], ['Obdržené góly',''+t.ga]
+      ];
+      cells.forEach(([k,v])=>{
+        const c = mk('div','card pad'); c.style.background='#0e1530';
+        const kEl = mk('div','key'); kEl.textContent=k; const vEl = mk('div','val'); vEl.textContent=v; c.append(kEl,vEl); grid.appendChild(c);
+      });
+
+      // List of matches for the team
+      const list = mk('div','grid');
+      list.style.marginTop='10px';
+
+      matches.filter(m=> m.homeId===t.id || m.awayId===t.id).forEach(m=>{
+        const opp = TEAMS.find(x=> x.id === (m.homeId===t.id ? m.awayId : m.homeId));
+        const isHome = m.homeId===t.id;
+        const row = mk('div','card pad'); row.style.background='#0e1530';
+        const res = evaluateMatch(m);
+        let line = `${isHome? '🏠':'🚌'} ${opp.name} • ${m.round}. kolo`;
+        if(res){
+          const hg = Number(m.detail.homeGoals), ag = Number(m.detail.awayGoals);
+          const you = isHome? hg: ag; const they = isHome? ag: hg;
+          const flag = you>they? (m.detail.ot? 'W/OT':'W') : (you===they? 'T':'L');
+          line += ` • ${you}:${they} ${m.detail.ot? '(OT)':''} • ${flag}`;
+        }
+        row.textContent = line; list.appendChild(row);
+      });
+
+      card.append(header, grid, list);
+      host.appendChild(card);
+    });
+  }
+
+  // ====== Utils ======
+  function groupBy(arr, fn){
+    return arr.reduce((acc, it)=>{ const k = fn(it); (acc[k] ||= []).push(it); return acc; },{});
+  }
+
+  function download(filename, text){
+    const a = document.createElement('a');
+    a.setAttribute('href', 'data:application/json;charset=utf-8,' + encodeURIComponent(text));
+    a.setAttribute('download', filename);
+    a.style.display='none'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
+  // ====== Tabs ======
+  document.querySelectorAll('.tab').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+      const id = b.dataset.tab;
+      ['standings','rounds','teams','data'].forEach(sec=> el('#'+sec).style.display = sec===id? 'block':'none');
+    })
+  })
+
+  // ====== Boot ======
+  let matches = generateSchedule(TEAMS);
+  const persisted = loadState();
+  if(persisted && Array.isArray(persisted.matches)){
+    // Merge by id to keep schedule but load details
+    const byId = Object.fromEntries(matches.map(m=>[m.id,m]));
+    persisted.matches.forEach(pm=>{ if(byId[pm.id]) byId[pm.id].detail = pm.detail || null; });
+  }
+
+  renderStandings();
+  renderRounds();
+  renderTeamPages();
+
+  // ====== Data I/O ======
+  el('#btn-export').onclick = ()=>{
+    const payload = { teams:TEAMS, matches, exportedAt:new Date().toISOString() };
+    const text = JSON.stringify(payload, null, 2);
+    el('#io').value = text; download('nhl-friends-league.json', text);
+  }
+  el('#btn-import').onclick = ()=>{
+    try{
+      const text = el('#io').value.trim(); if(!text) return alert('Vložte JSON do textového pole.');
+      const data = JSON.parse(text);
+      if(!Array.isArray(data.matches)) throw new Error('Chybí pole matches');
+      // basic sanity: keep our schedule structure, but allow imported details
+      const byId = Object.fromEntries(matches.map(m=>[m.id,m]));
+      data.matches.forEach(pm=>{ if(byId[pm.id]) byId[pm.id].detail = pm.detail || null; });
+      saveState(); renderStandings(); renderRounds(); renderTeamPages();
+      alert('Import hotov.');
+    }catch(e){ alert('Import selhal: '+ e.message) }
+  }
+  el('#btn-reset').onclick = ()=>{
+    if(confirm('Opravdu smazat všechna uložená data?')){
+      localStorage.removeItem(STORAGE_KEY);
+      matches.forEach(m=> m.detail=null);
+      renderStandings(); renderRounds(); renderTeamPages();
+      el('#io').value='';
+    }
+  }
+  </script>
+</body>
+</html>
