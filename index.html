@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Trackside Hokejová liga o Cejl — 4× každý s každým</title>
+<style>
+  :root{
+    --bg:#0b1220; --card:#111827; --ink:#e5e7eb; --muted:#9aa3b2; --line:#1f2937;
+    --good:#16a34a; --bad:#ef4444; --brand:#22c55e; --accent:#60a5fa; --warn:#f59e0b;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+  .wrap{max-width:1180px;margin:24px auto;padding:0 14px}
+  h1{font-size:26px;margin:0 0 8px}
+  p{color:var(--muted)}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 18px}
+  .tab{padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:#0d1627;cursor:pointer;font-weight:600}
+  .tab.active{outline:2px solid var(--accent); background:linear-gradient(180deg,#0f1d33,#0b1426)}
+  .grid{display:grid;gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 8px 20px rgba(0,0,0,.25)}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  button, .btn{
+    appearance:none;border:1px solid var(--line);background:#0f1d33;color:var(--ink);
+    padding:8px 12px;border-radius:12px;cursor:pointer;font-weight:600
+  }
+  button:hover{border-color:#2b3a52}
+  .btn-primary{background:#143558;border-color:#1f3b63}
+  .btn-warn{background:#2a1f03;border-color:#4a3705;color:#ffd78a}
+  .btn-good{background:#06210f;border-color:#113b21;color:#a7efc2}
+  .btn-bad{background:#2a0a0a;border-color:#3d1111;color:#ffc0c0}
+  .flex{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .table{width:100%;border-collapse:collapse}
+  .table th,.table td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:middle}
+  .table th{font-weight:700;color:#f1f5f9;background:#0f1b2e;position:sticky;top:0;z-index:5}
+  .leader{background:linear-gradient(180deg, rgba(34,197,94,.08), transparent)}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--muted)}
+  .pair{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center}
+  .team-tag{padding:6px 8px;border:1px solid var(--line);border-radius:12px;background:#0d1627;display:inline-block}
+  details{border:1px solid var(--line);border-radius:12px;padding:10px;background:#0f1b2e}
+  details[open]{outline:2px solid #1e3a8a}
+  summary{cursor:pointer;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:12px;color:var(--muted)}
+  input[type="number"], input[type="text"], select, textarea{
+    width:100%;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#0b1322;color:#fff
+  }
+  .right{justify-content:flex-end}
+  .note{font-size:12px;color:var(--muted)}
+  .team-page .header{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+  .kpi{background:#0f1b2e;border:1px solid var(--line);border-radius:12px;padding:10px}
+  .kpi b{font-size:18px}
+  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .hr{height:1px;background:var(--line);margin:10px 0}
+  .hidden{display:none}
+  .nowrap{white-space:nowrap}
+  .small{font-size:12px;color:var(--muted)}
+  @media (max-width:760px){
+    .two-col{grid-template-columns:1fr}
+    .pair{grid-template-columns:1fr;gap:6px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Trackside Hokejová liga o Cejl — 4× každé duo <span class="badge">2× doma + 2× venku</span></h1>
+  <div class="tabs">
+    <div class="tab active" data-view="standings">Ligová tabulka</div>
+    <div class="tab" data-view="rounds">Rozpis kol</div>
+    <div class="tab" data-view="teams">Stránky týmů</div>
+    <div class="tab" data-view="settings">Uložit / Export</div>
+  </div>
+
+  <div id="standings" class="grid">
+    <div class="card">
+      <div class="toolbar">
+        <span class="badge">🏆 Lídr tabulky je zvýrazněn</span>
+        <span class="badge">Řazení: body → skóre → góly</span>
+        <span class="badge">Celkem 20 kol / 60 zápasů</span>
+      </div>
+      <div class="table-wrap" style="max-height:65vh;overflow:auto;border:1px solid var(--line);border-radius:12px">
+        <table class="table" id="table-standings" aria-label="Ligová tabulka">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Tým</th>
+              <th class="nowrap">Z</th>
+              <th class="nowrap">V</th>
+              <th class="nowrap">VpP</th>
+              <th class="nowrap">PpP</th>
+              <th class="nowrap">P</th>
+              <th class="nowrap">Body</th>
+              <th class="nowrap">GF</th>
+              <th class="nowrap">GA</th>
+              <th class="nowrap">+/-</th>
+            </tr>
+          </thead>
+          <tbody id="standings-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="rounds" class="grid hidden">
+    <div class="card">
+      <div class="toolbar">
+        <button class="btn-primary" id="toggle-all">Rozbalit / Sbalit vše</button>
+        <span class="badge">Domácí tým a Hostující tým jsou v samostatných sloupcích</span>
+        <span class="badge">Nikdo nehraje hned příští kolo proti stejnému soupeři</span>
+        <span class="badge">Střídání doma/venku po blocích</span>
+      </div>
+      <div id="rounds-list" class="grid"></div>
+    </div>
+  </div>
+
+  <div id="teams" class="grid hidden">
+    <div class="card">
+      <div class="toolbar">
+        <label class="badge">Vyber tým:</label>
+        <select id="team-select"></select>
+        <button id="team-refresh">Znovu spočítat statistiky</button>
+      </div>
+      <div id="team-page" class="team-page grid"></div>
+    </div>
+  </div>
+
+  <div id="settings" class="grid hidden">
+    <div class="card">
+      <div class="toolbar">
+        <button id="save-local" class="btn-good">Uložit do prohlížeče</button>
+        <button id="load-local">Načíst z prohlížeče</button>
+        <button id="clear-local" class="btn-bad">Vymazat uložená data</button>
+      </div>
+      <div class="row">
+        <button id="export-json">Exportovat JSON</button>
+        <input id="import-file" type="file" accept="application/json" />
+        <button id="import-json" class="btn-primary">Importovat JSON</button>
+      </div>
+      <p class="note">Data se ukládají do <code>localStorage</code>. Export/Import umožňuje přenést výsledky mezi zařízeními.</p>
+    </div>
+  </div>
+
+  <p class="small">Verze LITE. Vše běží v prohlížeči, žádný backend.</p>
+</div>
+
+<script>
+// --- Týmy ---
+const teams = [
+  { id:"VGK", name:"Vegas Golden Knights", player:"Adam",  colors:["#b4975a","#333333"] },
+  { id:"NSH", name:"Nashville Predators",  player:"Filip", colors:["#ffb81c","#041e42"] },
+  { id:"WSH", name:"Washington Capitals",  player:"Martin",colors:["#c8102e","#041e42"] },
+  { id:"DAL", name:"Dallas Stars",         player:"ShyRaptor", colors:["#006847","#8f8f8c"] },
+  { id:"BOS", name:"Boston Bruins",        player:"Ihaz", colors:["#ffb81c","#000000"] },
+  { id:"TOR", name:"Toronto Maple Leafs",  player:"Kráťa", colors:["#003e7e","#ffffff"] },
+];
+const teamIds = teams.map(t=>t.id);
+const byId = Object.fromEntries(teams.map(t=>[t.id,t]));
+
+// --- Rozpis 20 kol (4× každý s každým) ---
+function baseFive(ids){
+  const n = ids.length;
+  const fixed = ids[0];
+  let ring = ids.slice(1);
+  const rounds = [];
+  for(let r=0;r<n-1;r++){
+    const pairs = [];
+    pairs.push([fixed, ring[ring.length-1]]);
+    for(let i=0;i<(n/2)-1;i++){
+      pairs.push([ring[i], ring[ring.length-2-i]]);
+    }
+    rounds.push(pairs);
+    ring = [ring[ring.length-1]].concat(ring.slice(0,ring.length-1));
+  }
+  return rounds;
+}
+function make20Rounds(ids){
+  const r5 = baseFive(ids);
+  const blockH = r5.map(pairs => pairs.map(([A,B])=>({home:A, away:B})));
+  const blockA = r5.map(pairs => pairs.map(([A,B])=>({home:B, away:A})));
+  return [...blockH, ...blockA, ...blockH, ...blockA];
+}
+const schedule = make20Rounds(teamIds);
+
+// --- Persistence ---
+const STORAGE_KEY = "nhl_friends_league_v4x";
+function saveToLocal(){
+  const payload = { matches: getAllMatches().map(m=>m.data) };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+function loadFromLocal(){
+  const text = localStorage.getItem(STORAGE_KEY);
+  if(!text) return;
+  try{
+    const payload = JSON.parse(text);
+    if(payload && Array.isArray(payload.matches)){
+      const map = Object.fromEntries(payload.matches.map(m=>[m.id,m]));
+      applySavedData(map);
+    }
+  }catch(e){ console.error(e); }
+}
+function exportJSON(){
+  const payload = {
+    meta:{app:"Trackside League", version:2, mode:"4x"},
+    matches: getAllMatches().map(m=>m.data),
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "trackside-league-4x.json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+function importJSONFile(file, onDone){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const payload = JSON.parse(reader.result);
+      if(payload && Array.isArray(payload.matches)){
+        const map = Object.fromEntries(payload.matches.map(m=>[m.id,m]));
+        applySavedData(map); onDone && onDone(true);
+      }else onDone && onDone(false);
+    }catch(e){ console.error(e); onDone && onDone(false); }
+  };
+  reader.readAsText(file);
+}
+
+// --- DOM utils ---
+function el(tag, attrs={}, children=[]){
+  const e = document.createElement(tag);
+  Object.entries(attrs).forEach(([k,v])=>{
+    if(k==="class") e.className = v;
+    else if(k==="html") e.innerHTML = v;
+    else if(k.startsWith("on") && typeof v==="function") e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k,v);
+  });
+  (Array.isArray(children)?children:[children]).forEach(c=>{
+    if(c==null) return;
+    if(typeof c==="string") e.appendChild(document.createTextNode(c));
+    else e.appendChild(c);
+  });
+  return e;
+}
+
+// --- Zápasy ---
+const matchesById = new Map();
+function matchId(roundIdx, idx){ return `R${roundIdx+1}_M${idx+1}`; }
+function defaultMatchData(id, home, away){
+  return {
+    id, home, away,
+    scoreHome: 0, scoreAway: 0, result: "",
+    shotsHome: 0, shotsAway: 0, hitsHome: 0, hitsAway: 0,
+    toaHome: "00:00", toaAway: "00:00",
+    passHome: 0, passAway: 0, faceoffHome: 0, faceoffAway: 0,
+    pimsHome: 0, pimsAway: 0, ppHome: 0, ppAway: 0,
+    ppTimeHome: "00:00", ppTimeAway: "00:00", shgHome: 0, shgAway: 0,
+    p1Home: 0, p1Away: 0, p2Home: 0, p2Away: 0, p3Home: 0, p3Away: 0, note:""
+  };
+}
+
+function createMatchCard(roundIdx, idx, pair){
+  const id = matchId(roundIdx, idx);
+  const data = defaultMatchData(id, pair.home, pair.away);
+
+  const domCol = el("div", {class:"field"}, [
+    el("label", {}, "Domácí tým"),
+    el("div", {class:"team-tag"}, `${byId[pair.home].name} (${pair.home})`),
+  ]);
+  const awaCol = el("div", {class:"field"}, [
+    el("label", {}, "Hostující tým"),
+    el("div", {class:"team-tag"}, `${byId[pair.away].name} (${pair.away})`),
+  ]);
+
+  const head = el("div", {class:"pair"}, [ domCol, el("div", {}, "×"), awaCol ]);
+  const summary = el("summary", {html:`<b>${byId[pair.home].name}</b> × <b>${byId[pair.away].name}</b> <span class="small">(klikni pro detail)</span>`});
+
+  function numField(key, labelTxt){
+    const input = el("input", {type:"number", value:0, min:"0", oninput:()=>{ data[key]=Number(input.value||0); refresh(); }});
+    return el("div", {class:"field"}, [el("label",{},labelTxt), input]);
+  }
+  function timeField(key, labelTxt){
+    const input = el("input", {type:"text", value:"00:00", oninput:()=>{ data[key]=input.value; }});
+    return el("div", {class:"field"}, [el("label",{},labelTxt), input]);
+  }
+  const resSel = el("select", {oninput:()=>{ data.result = resSel.value; refresh(); }}, [
+    el("option", {value:""}, "Výsledek..."),
+    el("option", {value:"HW"}, "Vyhrál domácí"),
+    el("option", {value:"HWOT"}, "Vyhrál domácí (OT)"),
+    el("option", {value:"AW"}, "Vyhrál hostující"),
+    el("option", {value:"AWOT"}, "Vyhrál hostující (OT)"),
+  ]);
+
+  const scHome = el("input", {type:"number", value:0, min:"0", oninput:()=>{ data.scoreHome=Number(scHome.value||0); refresh(); }});
+  const scAway = el("input", {type:"number", value:0, min:"0", oninput:()=>{ data.scoreAway=Number(scAway.value||0); refresh(); }});
+
+  const goalsRow = el("div", {class:"three-col"}, [
+    numField("p1Home","Góly 1. třetina (domácí)"),
+    numField("p1Away","Góly 1. třetina (hosté)"),
+    el("div", {},""),
+    numField("p2Home","Góly 2. třetina (domácí)"),
+    numField("p2Away","Góly 2. třetina (hosté)"),
+    el("div", {},""),
+    numField("p3Home","Góly 3. třetina (domácí)"),
+    numField("p3Away","Góly 3. třetina (hosté)"),
+    el("div", {},""),
+  ]);
+
+  const statsGrid = el("div", {class:"two-col"}, [
+    el("div", {class:"field"}, [el("label",{},"Typ výsledku"), resSel]),
+    el("div", {class:"field"}, [el("label",{},"Poznámka"), el("input",{type:"text", oninput:e=>{data.note=e.target.value;}})]),
+    el("div", {class:"field"}, [el("label",{},"Skóre domácí"), scHome]),
+    el("div", {class:"field"}, [el("label",{},"Skóre hosté"), scAway]),
+    numField("shotsHome","Střely (domácí)"),
+    numField("shotsAway","Střely (hosté)"),
+    numField("hitsHome","Hity (domácí)"),
+    numField("hitsAway","Hity (hosté)"),
+    timeField("toaHome","Čas v útočném pásmu (domácí)"),
+    timeField("toaAway","Čas v útočném pásmu (hosté)"),
+    numField("passHome","Úspěšnost přihrávek % (domácí)"),
+    numField("passAway","Úspěšnost přihrávek % (hosté)"),
+    numField("faceoffHome","Vyhraná vhazování (domácí)"),
+    numField("faceoffAway","Vyhraná vhazování (hosté)"),
+    numField("pimsHome","Trestné minuty (domácí)"),
+    numField("pimsAway","Trestné minuty (hosté)"),
+    numField("ppHome","Přesilovky (domácí)"),
+    numField("ppAway","Přesilovky (hosté)"),
+    timeField("ppTimeHome","Čas přesilovky (domácí)"),
+    timeField("ppTimeAway","Čas přesilovky (hosté)"),
+    numField("shgHome","Góly v oslabení (domácí)"),
+    numField("shgAway","Góly v oslabení (hosté)"),
+  ]);
+
+  const details = el("details", {}, [summary, el("div",{class:"hr"}), head, el("div",{class:"hr"}), goalsRow, el("div",{class:"hr"}), statsGrid]);
+  const root = el("div", {class:"card"}, [details]);
+  matchesById.set(id, {root, data});
+  function refresh(){ renderStandings(); }
+  return {root, data};
+}
+
+// --- Render kol ---
+function renderRounds(){
+  const list = document.getElementById("rounds-list");
+  list.innerHTML = "";
+  schedule.forEach((pairs, rIdx)=>{
+    const title = el("h2", {}, `${rIdx+1}. kolo`);
+    const roundWrap = el("div", {class:"grid"});
+    pairs.forEach((pair, idx)=>{
+      const m = createMatchCard(rIdx, idx, pair);
+      roundWrap.appendChild(m.root);
+    });
+    const grid = el("div", {class:"card"}, [
+      el("div", {class:"toolbar"}, [
+        el("span", {class:"badge"}, "3 zápasy v kole"),
+        el("span", {class:"badge"}, "Domácí tým | Hostující tým"),
+      ]),
+      title, roundWrap
+    ]);
+    list.appendChild(grid);
+  });
+}
+
+// --- Tabulka ---
+function emptyStats(){
+  return {
+    GP:0, W:0, WOT:0, LOT:0, L:0, PTS:0, GF:0, GA:0,
+    shots:0, hits:0, toaSec:0, passSum:0, passCount:0, faceoffs:0, pims:0, pps:0, pptimeSec:0, shg:0,
+    p1:0, p2:0, p3:0,
+  };
+}
+function parseMMSS(s){
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(s||""));
+  if(!m) return 0;
+  return parseInt(m[1])*60 + parseInt(m[2]);
+}
+function fmtMMSS(sec){
+  const m = Math.floor(sec/60); const s = sec%60;
+  return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+function getAllMatches(){ return Array.from(matchesById.values()); }
+function applySavedData(map){
+  getAllMatches().forEach(m=>{
+    const saved = map[m.data.id];
+    if(saved){ Object.assign(m.data, saved); }
+  });
+  renderStandings();
+  renderTeamPage(currentTeamId);
+}
+function computeStandings(){
+  const s = Object.fromEntries(teamIds.map(id=>[id, emptyStats()]));
+  getAllMatches().forEach(({data})=>{
+    if(!data.result) return;
+    const A = s[data.home], B = s[data.away];
+    A.GP++; B.GP++;
+    A.GF += data.scoreHome; A.GA += data.scoreAway;
+    B.GF += data.scoreAway; B.GA += data.scoreHome;
+
+    A.shots += data.shotsHome; B.shots += data.shotsAway;
+    A.hits  += data.hitsHome;  B.hits  += data.hitsAway;
+    A.toaSec += parseMMSS(data.toaHome); B.toaSec += parseMMSS(data.toaAway);
+    if(data.passHome){ A.passSum += data.passHome; A.passCount++; }
+    if(data.passAway){ B.passSum += data.passAway; B.passCount++; }
+    A.faceoffs += data.faceoffHome; B.faceoffs += data.faceoffAway;
+    A.pims += data.pimsHome; B.pims += data.pimsAway;
+    A.pps += data.ppHome; B.pps += data.ppAway;
+    A.pptimeSec += parseMMSS(data.ppTimeHome); B.pptimeSec += parseMMSS(data.ppTimeAway);
+    A.shg += data.shgHome; B.shg += data.shgAway;
+    A.p1 += data.p1Home; B.p1 += data.p1Away;
+    A.p2 += data.p2Home; B.p2 += data.p2Away;
+    A.p3 += data.p3Home; B.p3 += data.p3Away;
+
+    switch(data.result){
+      case "HW": A.W++; A.PTS+=3; B.L++; break;
+      case "AW": B.W++; B.PTS+=3; A.L++; break;
+      case "HWOT": A.WOT++; A.PTS+=2; B.LOT++; B.PTS+=1; break;
+      case "AWOT": B.WOT++; B.PTS+=2; A.LOT++; A.PTS+=1; break;
+    }
+  });
+  return s;
+}
+function renderStandings(){
+  const s = computeStandings();
+  const arr = teamIds.map(id=>{
+    const o = s[id]; const diff = o.GF - o.GA;
+    return {id, name:byId[id].name, ...o, DIFF:diff};
+  });
+  arr.sort((a,b)=> b.PTS - a.PTS || (b.DIFF - a.DIFF) || (b.GF - a.GF) || a.name.localeCompare(b.name));
+  const body = document.getElementById("standings-body");
+  body.innerHTML = "";
+  arr.forEach((row, idx)=>{
+    const tr = el("tr", {class: idx===0?"leader":""});
+    tr.appendChild(el("td", {}, idx===0 ? "1 🏆" : String(idx+1)));
+    tr.appendChild(el("td", {}, row.name));
+    tr.appendChild(el("td", {}, String(row.GP)));
+    tr.appendChild(el("td", {}, String(row.W)));
+    tr.appendChild(el("td", {}, String(row.WOT)));
+    tr.appendChild(el("td", {}, String(row.LOT)));
+    tr.appendChild(el("td", {}, String(row.L)));
+    tr.appendChild(el("td", {}, String(row.PTS)));
+    tr.appendChild(el("td", {}, String(row.GF)));
+    tr.appendChild(el("td", {}, String(row.GA)));
+    tr.appendChild(el("td", {}, String(row.DIFF)));
+    body.appendChild(tr);
+  });
+}
+
+// --- Stránka týmu ---
+let currentTeamId = teamIds[0];
+function renderTeamSelect(){
+  const sel = document.getElementById("team-select");
+  sel.innerHTML = "";
+  teams.forEach(t=>{
+    const opt = el("option", {value:t.id}, `${t.player} – ${t.name} (${t.id})`);
+    sel.appendChild(opt);
+  });
+  sel.value = currentTeamId;
+  sel.oninput = () => { currentTeamId = sel.value; renderTeamPage(currentTeamId); };
+}
+function renderTeamPage(teamId){
+  const s = computeStandings()[teamId];
+  const wrap = document.getElementById("team-page");
+  wrap.innerHTML = "";
+  const header = el("div", {class:"header"}, [
+    el("h2", {}, `${byId[teamId].name} — stránka týmu`),
+    el("span", {class:"badge"}, `Hráč: ${byId[teamId].player}`),
+  ]);
+
+  const avgPass = s.passCount ? (s.passSum/s.passCount).toFixed(1) : "0.0";
+  const kpis = el("div", {class:"kpis"}, [
+    el("div", {class:"kpi"}, [el("div",{},"Zápasy"), el("b",{},String(s.GP))]),
+    el("div", {class:"kpi"}, [el("div",{},"Body"), el("b",{},String(s.PTS))]),
+    el("div", {class:"kpi"}, [el("div",{},"Skóre"), el("b",{},`${s.GF}:${s.GA} (${s.GF-s.GA})`)]),
+    el("div", {class:"kpi"}, [el("div",{},"Střely"), el("b",{},String(s.shots))]),
+    el("div", {class:"kpi"}, [el("div",{},"Hity"), el("b",{},String(s.hits))]),
+    el("div", {class:"kpi"}, [el("div",{},"Čas v útočném pásmu"), el("b",{},fmtMMSS(s.toaSec))]),
+    el("div", {class:"kpi"}, [el("div",{},"Přihrávky % (prům.)"), el("b",{},String(avgPass))]),
+    el("div", {class:"kpi"}, [el("div",{},"Vhazování (vyhr.)"), el("b",{},String(s.faceoffs))]),
+    el("div", {class:"kpi"}, [el("div",{},"Trestné minuty"), el("b",{},String(s.pims))]),
+    el("div", {class:"kpi"}, [el("div",{},"Přesilovky"), el("b",{},String(s.pps))]),
+    el("div", {class:"kpi"}, [el("div",{},"Čas přesilovek"), el("b",{},fmtMMSS(s.pptimeSec))]),
+    el("div", {class:"kpi"}, [el("div",{},"Góly v oslabení"), el("b",{},String(s.shg))]),
+    el("div", {class:"kpi"}, [el("div",{},"Góly 1./2./3. třetina"), el("b",{},`${s.p1}/${s.p2}/${s.p3}`)]),
+  ]);
+
+  const table = el("table", {class:"table"});
+  table.appendChild(el("thead", {}, el("tr", {}, [
+    el("th", {}, "Kolo"),
+    el("th", {}, "Domácí"),
+    el("th", {}, "Hosté"),
+    el("th", {}, "Skóre"),
+    el("th", {}, "Typ"),
+    el("th", {}, "1.tř"),
+    el("th", {}, "2.tř"),
+    el("th", {}, "3.tř"),
+  ])));
+  const tbody = el("tbody", {});
+
+  schedule.forEach((pairs, rIdx)=>{
+    pairs.forEach((p, idx)=>{
+      const id = matchId(rIdx, idx);
+      const rec = matchesById.get(id).data;
+      if(rec.home!==teamId && rec.away!==teamId) return;
+      const score = `${rec.scoreHome}:${rec.scoreAway}`;
+      const type = rec.result||"";
+      const p1 = `${rec.p1Home}:${rec.p1Away}`;
+      const p2 = `${rec.p2Home}:${rec.p2Away}`;
+      const p3 = `${rec.p3Home}:${rec.p3Away}`;
+      const tr = el("tr", {}, [
+        el("td", {}, String(rIdx+1)),
+        el("td", {}, byId[rec.home].name),
+        el("td", {}, byId[rec.away].name),
+        el("td", {}, score),
+        el("td", {}, type),
+        el("td", {}, p1),
+        el("td", {}, p2),
+        el("td", {}, p3),
+      ]);
+      tbody.appendChild(tr);
+    });
+  });
+  table.appendChild(tbody);
+
+  wrap.appendChild(header);
+  wrap.appendChild(kpis);
+  wrap.appendChild(el("div",{class:"card"},[el("h3",{},"Odehrané zápasy"), table]));
+}
+
+// --- Navigace a init ---
+function switchView(key){
+  ["standings","rounds","teams","settings"].forEach(k=>{
+    document.getElementById(k).classList.toggle("hidden", k!==key);
+    document.querySelectorAll(`.tab[data-view]`).forEach(t=>{
+      t.classList.toggle("active", t.getAttribute("data-view")===key);
+    });
+  });
+}
+document.querySelectorAll(".tab[data-view]").forEach(t=> t.addEventListener("click", ()=> switchView(t.getAttribute("data-view")) ));
+document.getElementById("toggle-all").addEventListener("click", ()=>{
+  document.querySelectorAll("#rounds-list details").forEach(d=> d.open = !d.open);
+});
+document.getElementById("save-local").addEventListener("click", ()=>{ saveToLocal(); alert("Uloženo do prohlížeče."); });
+document.getElementById("load-local").addEventListener("click", ()=>{ loadFromLocal(); alert("Načteno z prohlížeče."); });
+document.getElementById("clear-local").addEventListener("click", ()=>{ localStorage.removeItem(STORAGE_KEY); alert("Uložená data smazána."); });
+document.getElementById("export-json").addEventListener("click", ()=> exportJSON() );
+document.getElementById("import-json").addEventListener("click", ()=>{
+  const f = document.getElementById("import-file").files?.[0];
+  if(!f){ alert("Vyber soubor .json"); return; }
+  importJSONFile(f, ok=> alert(ok?"Načteno.":"Nepodařilo se importovat."));
+});
+document.getElementById("team-refresh").addEventListener("click", ()=> renderTeamPage(currentTeamId) );
+
+// Start
+renderRounds();
+renderStandings();
+renderTeamSelect();
+renderTeamPage(currentTeamId);
+loadFromLocal();
+</script>
+</body>
+</html>
